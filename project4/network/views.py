@@ -4,12 +4,30 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User
+from .forms import NewPost
+from .models import User, userPost
 
 
 def index(request):
-    return render(request, "network/index.html")
-
+    # Create a New userPost
+    if request.method == "POST":
+        user = User.objects.get(pk=request.user.id)
+        form = NewPost(request.POST) 
+        entry = userPost(user=user, content=form)
+        entry.save()
+        if form.is_valid():
+            # form.save()
+            return HttpResponse('<p>Info Saved!</p>')
+        else:
+            return HttpResponse('<p>Info is not Valid!</p>')
+    else:
+        form = NewPost
+        posts = userPost.objects.all()
+        context = {
+            'posts': posts,
+            'form': form
+        }
+        return render(request, "network/index.html", context)
 
 def login_view(request):
     if request.method == "POST":
@@ -61,3 +79,4 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "network/register.html")
+    

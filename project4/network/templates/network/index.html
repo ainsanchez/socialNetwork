@@ -1,5 +1,28 @@
 {% extends "network/layout.html" %}
 
-{% block body %}
-    TODO
-{% endblock %}
+    {% block body %}
+
+        {% if user.is_authenticated %}
+            <h3>All posts</h3>
+
+            <div id="userpost_view" >
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit">Post</button>
+                </form>
+            </div>
+
+            {% for post in posts %}
+                <div id="post-container">
+                    <p>{{ post.user.username }}</p>
+                    <p>{{ post.content }}</p>
+                    <p>{{ post.timestamp }}</p>
+                    <p>{{ post.likes }}</p>
+
+                </div>
+            {% endfor %}
+            
+        {% endif %}
+
+    {% endblock %}

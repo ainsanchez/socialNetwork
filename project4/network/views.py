@@ -1,21 +1,26 @@
+import time
+
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.html import strip_tags
 
 from .forms import NewPost
 from .models import User, userPost
 
 
 def index(request):
+    #return render(request, "network/index.html")
     # Create a New userPost
     if request.method == "POST":
         user = User.objects.get(pk=request.user.id)
-        form = NewPost(request.POST) 
-        entry = userPost(user=user, content=form)
-        entry.save()
+        form = NewPost(request.POST)
+        content = strip_tags(NewPost(request.POST)["content"])
+        entry = userPost(user=user, content=content)
         if form.is_valid():
+            entry.save()
             # form.save()
             return HttpResponse('<p>Info Saved!</p>')
         else:
@@ -24,10 +29,12 @@ def index(request):
         form = NewPost
         posts = userPost.objects.all()
         context = {
-            'posts': posts,
-            'form': form
+            'form': form,
+            'posts': posts
         }
         return render(request, "network/index.html", context)
+
+
 
 def login_view(request):
     if request.method == "POST":
@@ -80,3 +87,27 @@ def register(request):
     else:
         return render(request, "network/register.html")
     
+
+# Make a new UserPost, mimicking the post method commented in index
+def posts(request):
+
+    # Get start and end points
+    start = int(request.GET.get("start") or 0)
+    end = int(request.GET.get("end") or (start + 1))
+
+    # Load the posts saved in the platform
+    posts = userPost.objects.all()
+
+    # Generate a list of posts
+    posts = list(posts.order_by("-timestamp").all())
+    data = []
+    for i in range(start, end + 1):
+        data.append(posts[i].serialize())
+
+    # Artificially delay speed of response
+    time.sleep(1)
+
+    # Return a list of posts
+    return JsonResponse({"posts": data})
+    # return JsonResponse([post.serialize() for post in posts], safe=False)
+

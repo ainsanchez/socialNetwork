@@ -2,163 +2,213 @@
 
     {% block body %}
 
-        {% block style %}
+        {% if user.is_authenticated %}
 
-        <style>
+            {% block style %}
 
-            @keyframes hide {
-                0% {
-                    opacity: 1;
-                    height: 100%;
-                    line-height: 100%;
-                    padding: 20px;
-                    margin-bottom: 10px;                   
-                }
-                75% {
-                    opacity : 0;
-                    height: 100%;
-                    line-height: 100%;
-                    padding: 20px;
-                    margin-bottom: 10px;    
-                }
-                100% {
-                    opacity: 0;
-                    height: 0px;
-                    line-height: 0px;
-                    padding: 0px;
-                    margin-bottom: 0px;
-                }
-            }
+                <style>
 
-            .hide {
-                float: right;
-            }
-
-            .post {
-                background-color: #77dd11;
-                padding: 20px;
-                margin-bottom: 10px;
-                animation-name: hide;
-                animation-duration: 2s;
-                animation-fill-mode: forwards;
-                animation-play-state: paused;
-            }
-
-            body {
-                padding-bottom: 50px;
-            }
-
-        </style>
-
-
-        {% endblock %}
-
-       {% block javascript %}
-
-<!--             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.querySelectorAll('.userButton').forEach(button => {
-                        button.onclick = function() {
-                            //Show user posts and hide other views
-                            document.querySelectorAll('.userPost').forEach(div => {
-                                div.style.display = 'none';
-                            })
-                            document.querySelector('#post-container').style.display = 'none';
-                        }
-                    });
-                });
-
-                function load_user_posts() {
-                    //Show user posts and hide other views
-                    document.querySelector('#userpost-view').style.display = 'none';
-                    document.querySelector('#post-container').style.display = 'none';
-                }
-            </script> -->
-
-            <script>
-
-                // Start with the first post
-                let counter = 1;
-
-                // Load posts 10 at a time
-                const quantity = 2;
-
-                // When DOM loads, render the first 20 posts
-                document.addEventListener('DOMContentLoaded', load);
-
-                window.onscroll = () => {
-                    if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
-                        load();
+                    .post {
+                        background-color: #77dd11;
+                        padding: 20px;
+                        margin-bottom: 10px;
+                        /* animation-name: "userpost"; */
+                        animation-duration: 2s;
+                        animation-fill-mode: forwards;
+                        animation-play-state: paused;
                     }
-                }
+
+                    body {
+                        padding-bottom: 50px;
+                    }
+
+                </style>
+
+            {% endblock %}            
+
+            {% block javascript %}
+
+                <div id="userpost-view" class="userPost" >
+                    <h3>All posts</h3>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit">Post</button>
+                    </form>
+                </div>
+
+                
+                <script>
+
+                    // Start with the first post
+                    let counter = 0;
+
+                    // Load posts 10 at a time
+                    const quantity = 4;
+
+                    // When DOM loads, render the first 20 posts
+                    document.addEventListener('DOMContentLoaded', load);
+
+                    window.onscroll = () => {
+                        if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+                            load();
+                        }
+                    }
 
                     document.addEventListener('click', event => {
                         const element = event.target;
-                        if (element.className = 'userButton') {
-                            element.parentElement.style.animationPlayState = 'running';
-                            element.parentElement.addEventListener('animationend', () => {
-                                element.parentElement.remove();
+                        if (element.className === 'userpost') {
+
+                            // First hide the views that I do not want to display
+                            document.querySelectorAll("#posts").forEach(container => {
+                                container.style.display = 'none';
+                            });
+                            document.querySelectorAll("#following_posts").forEach(container => {
+                                container.style.display = 'none';
+                            });
+                            document.querySelectorAll("#user_posts").forEach(container => {
+                                container.style.display = 'block';
+                            });
+                            document.querySelector("#profile").style.display = 'block';
+                            document.querySelector("#userpost-view").style.display = 'none';
+
+                            // Get username via API to upload Community contents
+                            const username = element.value;
+                            fetch(`/profile/${username}`)
+                            .then(response => response.json())
+                            .then(data => {
+
+                                // Load the user profile
+                                document.querySelector("#profile").innerHTML = `<p> ${data.user} </p> \n
+                                                                                <p> ${data.nFollowers} followers and \n
+                                                                                follows ${data.nUserFollowers} </p> \n
+                                                                                <p> ${data.signedInUser}`;
+                                
+                                // Create the follow and unfollow buttons
+                                if (data.user!==data.signedInUser) {
+                                    const button = document.createElement("button");
+                                    button.innerText = "Follow";
+                                    button.id = "btnFollow";
+                                    document.querySelector('#profile').append(button);
+                                    const button2 = document.createElement("button");
+                                    button2.innerText = "Unfollow";
+                                    button2.id = "btnUnfollow";
+                                    document.querySelector('#profile').append(button2);
+                                }
+
+                                // Load the followers' posts
+                                data.posts.forEach(contents => {            
+                                    // Create new post
+                                    const post = document.createElement('div');
+                                    post.className = 'post';
+                                    post.innerHTML = `<button class="userpost" value=${contents.user}> \n
+                                                    ${contents.user} </button> posted: <br> \n
+                                                    ${contents.content} <br> \n ${contents.timestamp} <br> \n
+                                                    ${contents.likes} likes`;
+
+                                    // Add post to DOM
+                                    document.querySelector('#user_posts').append(post);
+                                })
                             });
                         }
+                    });    
+
+                    // Select objects from the layout to display posts in other tabs
+                    document.querySelector("#following").addEventListener('click', function(event) {
+                        
+                        // Prevent the default form submission
+                        event.preventDefault();
+
+                        // Hide objects that are not supposed to show
+                        document.querySelectorAll("#posts").forEach(container => {
+                            container.style.display = 'none';
+                        });
+                        document.querySelectorAll("#user_posts").forEach(container => {
+                            container.style.display = 'none';
+                        });
+                        document.querySelectorAll("#following_posts").forEach(container => {
+                            container.style.display = 'block';
+                        });
+                        document.querySelector("#profile").style.display = 'none';
+                        document.querySelector("#userpost-view").style.display = 'none';
+                            
+                        // Define the user
+                        const username = document.querySelector("#userName").innerText;
+                        // Fetch the API with the following users' posts
+                        fetch(`/following/${username}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Load the followers' posts
+                            data.posts.forEach(contents => {            
+                                // Create new post
+                                const post = document.createElement('div');
+                                post.className = 'post';
+                                post.innerHTML = `<button class="userpost" value=${contents.user}> \n
+                                                ${contents.user} </button> posted: <br> \n
+                                                ${contents.content} <br> \n ${contents.timestamp} <br> \n
+                                                ${contents.likes} likes`;
+
+                                // Add post to DOM
+                                document.querySelector('#following_posts').append(post);
+                            })
+                        });
                     });
 
-                // Load the next set of posts
-                function load() {
-                    // Set start and end post numbers, and update counter
-                    const start = counter;
-                    const end = start + quantity - 1;
-                    counter = end + 1;
+                        
+                    // Load the next set of posts
+                    function load() {
+                        // Set start and end post numbers, and update counter
 
-                    // Get the new posts and add posts
-                    fetch(`/posts?start=${start}&end=${end}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.posts.forEach(add_post);
-                    })
-                };
+                        let start = counter;
+                        let end = counter;
 
-                // Add new post with given contents to DOM
-                function add_post(contents) {
+                        if (counter < 1) {
+                            end = start + quantity - 1;
+                            counter = end + 1;                        
+                        } else {
+                            end = start + 1;
+                            counter = end + 1;      
+                        }
+                    
+                        // Get the new posts and add posts
+                        fetch(`/posts?start=${start}&end=${end}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.posts.forEach(add_post);
+                        })
+                    };
 
-                    // Create new post
-                    const post = document.createElement('div');
-                    post.className = 'post';
-                    post.innerHTML = `${contents.timestamp} ${contents.content} <button class="hide">Hide</button>`;
+                    // Add new post with given contents to DOM
+                    function add_post(contents) {
 
-                    // Add post to DOM
-                    document.querySelector('#posts').append(post);
-                }
+                        // Create new post
+                        const post = document.createElement('div');
+                        post.className = 'post';
+                        post.innerHTML = `<button class="userpost" value=${contents.user}> \n
+                                         ${contents.user} </button> posted: <br> \n
+                                         ${contents.content} <br> \n ${contents.timestamp} <br> \n
+                                         ${contents.likes} likes`;
 
-            </script>
+                        // Add post to DOM
+                        document.querySelector('#posts').append(post);
+                    }
 
-        {% endblock %}
+                </script>
 
-        <div id="posts">
-
-        </div>
-
-
-        {% if user.is_authenticated %}
-            <h3>All posts</h3>
-
-            <div id="userpost-view" class="userPost" >
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <button type="submit">Post</button>
-                </form>
-            </div>
-
-            {% for post in posts %}
-                <div id="post-container">
-                    <button class="userButton" id="username">{{ post.user.username }}</button>
-                    <p>{{ post.content }}</p>
-                    <p>{{ post.timestamp }}</p>
-                    <p>{{ post.likes }}</p>
-
+                <div id="posts">
                 </div>
-            {% endfor %}
-            
+
+                <div id="profile">
+                </div>
+
+                <div id="user_posts">
+                </div>
+
+                <div id="following_posts">
+                </div>
+
+            {% endblock %}
+
         {% endif %}
 
     {% endblock %}

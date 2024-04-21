@@ -1,6 +1,9 @@
+import json
 import time
 
+from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -8,7 +11,7 @@ from django.urls import reverse
 from django.utils.html import strip_tags
 
 from .forms import NewPost
-from .models import User, userPost
+from .models import User, userPost, Community
 
 
 def index(request):
@@ -93,7 +96,7 @@ def posts(request):
 
     # Get start and end points
     start = int(request.GET.get("start") or 0)
-    end = int(request.GET.get("end") or (start + 1))
+    end = int(request.GET.get("end") or (start + 9))
 
     # Load the posts saved in the platform
     posts = userPost.objects.all()
@@ -110,4 +113,158 @@ def posts(request):
     # Return a list of posts
     return JsonResponse({"posts": data})
     # return JsonResponse([post.serialize() for post in posts], safe=False)
+
+
+# Register followers for user community
+def addFollower(request):
+
+    # Adding a follower must occur via POST
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status = 400)
+    
+    # Check for user followers
+    username = json.loads(request.follower)
+
+    # Define a user's community
+    user = User.objects.get(username=username)
+    community = Community.objects.get(user=user)
+
+    # Check if the follower is already registered in the user's community
+    follower = request.user.username
+    newFollower = User.objects.get(usernamme=follower)
+    try: 
+        community.followers.get(username=follower)
+        return JsonResponse({
+            "error": f"User {follower} is already following"
+        })
+    # If it is not registered, then add it to the user's community and update the # of folowers
+    except User.DoesNotExist:
+        community.followers.add(newFollower)
+        community.number_of_followers += 1
+        community.save()
+
+    return JsonResponse({"message": "Follower added successfully"}, status = 201)
+
+
+# Get user profile data
+@login_required
+def profile(request, username):
+
+    # Search for the user
+    user = User.objects.get(username=username)
+
+    # Search for the posts of the user
+    posts = userPost.objects.filter(user=user)
+
+    # Get signed-in user
+    signedInUser = request.user.username
+
+    # Serialize the user posts 
+    posts = list(posts.order_by("-timestamp").all())
+    data = []
+    for i in range(0, len(posts)):
+        data.append(posts[i].serialize())
+
+    # Obtain the number of followers
+    followers = Community.objects.get(user=user).followers.all()
+    nFollowers = len(followers)
+
+    #Obtain the number of follows
+    user_followers = user.user_followers.all()
+    nUserFollowers = len(user_followers)
+
+    # Return the JsonResponse
+    return JsonResponse({"posts": data, 
+                         "user": user.username, 
+                         "nFollowers": nFollowers,
+                         "nUserFollowers": nUserFollowers,
+                         "signedInUser": signedInUser})
+
+
+@login_required
+def following(request, username):
+
+    # Identify the users that the user is following
+    user = User.objects.get(username=username)
+    community = Community.objects.filter(followers=user)
+
+    # Apply a loop to extract all users in an array
+    data = []
+    for i in range(0, len(community)):
+        data.append(community[i].user.username)
+
+    # Load posts from the user array to display
+    users = User.objects.filter(username__in=data)
+    posts = userPost.objects.filter(user__in=users)
+
+    # Serialize the user posts for the JsonResponse
+    posts = list(posts.order_by("-timestamp").all())
+    newData = []
+    for i in range(0, len(posts)):
+        newData.append(posts[i].serialize())
+
+    # Artificially delay speed of response
+    time.sleep(1)
+
+    # Return list of posts
+    return JsonResponse({"posts": newData})
+
+
+# Get a community based on the profile/username request 
+# -- Notice that this page is not uploaded 
+@login_required
+def followers_content(request, username):
+
+    #print(username)
+    #print("princearthas")
+    # Filter user based on username, and then query his/her community
+    user = User.objects.get(username=username)
+
+    # Then query user's community to display his/her profile info
+    # Set a try and catch for error display when selecting princearthas profile - Community.DoesNotExist
+    
+    community = Community.objects.filter(user=user)
+
+    # If user does not have a community yet, then create one with no followers
+    if len(community) < 1:
+        setCommunity = Community.objects.create(user=user)
+        setCommunity.save()
+        # Update community
+        community = Community.objects.filter(user=user)
+        # Add a return just to load the page ---
+        return JsonResponse({"user": user.username, "community": community[0].number_of_followers})
+    else:
+        # Create an array with the followers from the user's community
+        followers = community[0].followers.all()
+        data = []
+        for follower in followers:
+            data.append(follower.username)
+
+    # Finally, request the posts published by user followers
+    users = User.objects.filter(username__in=data)
+    posts = userPost.objects.filter(user__in=users)
+
+    # Generate a list of posts
+    posts = list(posts.order_by("-timestamp").all())
+    dataFinal = []
+    for i in range(0, len(posts)):
+        dataFinal.append(posts[i].serialize())
+
+    # Use Paginator to set posts in 10 item pages
+    paginator = Paginator(dataFinal, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # Artificially delay speed of response
+    time.sleep(1)
+
+    # Return a list of posts
+    # return JsonResponse({"posts": dataFinal, "user": user, "community": community})
+    return JsonResponse({"posts": dataFinal, "user": user.username,
+                          "community": community[0].number_of_followers,
+                           "page_obj": page_obj})
+    # page_obj is not json seriazable, so I can only render the request - No javascript for this?
+
+
+
 

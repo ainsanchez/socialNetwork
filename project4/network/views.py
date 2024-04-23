@@ -95,23 +95,47 @@ def register(request):
 def posts(request):
 
     # Get start and end points
-    start = int(request.GET.get("start") or 0)
-    end = int(request.GET.get("end") or (start + 9))
+    #start = int(request.GET.get("start") or 0)
+    #end = int(request.GET.get("end") or (start + 9))
 
     # Load the posts saved in the platform
     posts = userPost.objects.all()
 
     # Generate a list of posts
     posts = list(posts.order_by("-timestamp").all())
-    data = []
-    for i in range(start, end + 1):
-        data.append(posts[i].serialize())
+    #data = []
+    #for i in range(start, end + 1):
+    #    data.append(posts[i].serialize())
+
+    # Transforming the data into a Paginator object
+    # Retrieve all data from the model
+    paginator = Paginator(posts, 10) 
+
+    # Paginate with 10 items per page
+    page_number = request.GET.get("page") 
+    page_obj = paginator.get_page(page_number)
+
+    # Retrieve data for the current page
+    # newData = list(page_obj.object_list.values()) 
+    serialized_data = [post.serialize() for post in page_obj.object_list]
 
     # Artificially delay speed of response
     time.sleep(1)
 
+    # Print page numbers
+    if page_obj.has_next():
+        print(page_obj.number)
+    if page_obj.has_previous():
+        print(page_obj.number)
+
     # Return a list of posts
-    return JsonResponse({"posts": data})
+    # return JsonResponse({"posts": data})
+    return JsonResponse({"posts": serialized_data,
+                         "total_pages": paginator.num_pages,
+                         "has_next": page_obj.has_next(),
+                         "has_previous": page_obj.has_previous(),
+                         "page_number": page_obj.number})
+
     # return JsonResponse([post.serialize() for post in posts], safe=False)
 
 
@@ -265,6 +289,22 @@ def followers_content(request, username):
                            "page_obj": page_obj})
     # page_obj is not json seriazable, so I can only render the request - No javascript for this?
 
+""" from django.core.paginator import Paginator
+from django.http import JsonResponse
+from .models import YourModel
 
+def your_view(request):
+    queryset = YourModel.objects.all()  # Replace YourModel with your actual model
+    paginator = Paginator(queryset, per_page=10)  # Change per_page according to your requirement
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
+    serialized_data = list(page_obj.object_list.values())  # Serialize queryset to JSON
 
+    return JsonResponse({
+        'data': serialized_data,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+        'page_number': page_obj.number,
+        'total_pages': paginator.num_pages
+    }) """

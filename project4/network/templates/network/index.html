@@ -41,19 +41,20 @@
                 <script>
 
                     // Start with the first post
-                    let counter = 0;
+                    // let counter = 0;
+                    // let page_number = 1;
 
                     // Load posts 10 at a time
-                    const quantity = 4;
+                    // const quantity = 4;
 
                     // When DOM loads, render the first 20 posts
-                    document.addEventListener('DOMContentLoaded', load);
+                    document.addEventListener('DOMContentLoaded', load(1));
 
-                    window.onscroll = () => {
+/*                     window.onscroll = () => {
                         if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
                             load();
                         }
-                    }
+                    } */
 
                     document.addEventListener('click', event => {
                         const element = event.target;
@@ -71,6 +72,7 @@
                             });
                             document.querySelector("#profile").style.display = 'block';
                             document.querySelector("#userpost-view").style.display = 'none';
+                            document.querySelector("#next-prev-link").style.display = 'none';
 
                             // Get username via API to upload Community contents
                             const username = element.value;
@@ -131,7 +133,8 @@
                         });
                         document.querySelector("#profile").style.display = 'none';
                         document.querySelector("#userpost-view").style.display = 'none';
-                            
+                        document.querySelector("#next-prev-link").style.display = 'none';
+
                         // Define the user
                         const username = document.querySelector("#userName").innerText;
                         // Fetch the API with the following users' posts
@@ -153,13 +156,14 @@
                             })
                         });
                     });
-
                         
                     // Load the next set of posts
-                    function load() {
+                    // function load() {
+                    function load(pageNumber) {
+
                         // Set start and end post numbers, and update counter
 
-                        let start = counter;
+/*                         let start = counter;
                         let end = counter;
 
                         if (counter < 1) {
@@ -168,18 +172,64 @@
                         } else {
                             end = start + 1;
                             counter = end + 1;      
-                        }
+                        } */
                     
                         // Get the new posts and add posts
-                        fetch(`/posts?start=${start}&end=${end}`)
+                        // fetch(`/posts?start=${start}&end=${end}`)
+                        fetch(`/posts/?page=${pageNumber}`)
                         .then(response => response.json())
                         .then(data => {
-                            data.posts.forEach(add_post);
+                            data.posts.forEach(item => {
+                                // data.posts.forEach(add_post);
+                                const post = document.createElement('div');
+                                // post.innerHTML = '';
+                                post.className = 'post';
+                                post.innerHTML = `<button class="userpost" value=${item.user}> \n
+                                         ${item.user} </button> posted: <br> \n
+                                         ${item.content} <br> \n ${item.timestamp} <br> \n
+                                         ${item.likes} likes`;
+                                // Add post to DOM
+                                document.querySelector('#posts').append(post);
+                            });
+
+                            // Handle pagination links
+                            const paginationLinks = document.getElementById("next-prev-link");
+                            // let page_number = data.page_number;
+                            paginationLinks.innerHTML = '';
+                            if (data.has_previous) {
+                                // paginationLinks.innerHTML += `<a href="#" onclick="load(${data.page_number-1})">Previous</a>)`;
+                                const previous_button = document.createElement('button');
+                                previous_button.innerText = "Previous";
+                                previous_button.addEventListener("click", () => {
+                                    document.querySelectorAll("#posts").forEach(container => {
+                                        container.innerHTML = '';
+                                    });
+                                    load(data.page_number - 1);
+                                });
+                                paginationLinks.append(previous_button);
+                            }
+                            const legend = document.createElement('text');
+                            legend.innerHTML += `Page ${data.page_number} of ${data.total_pages}`;
+                            paginationLinks.append(legend);
+                            // paginationLinks.innerHTML += `Page ${data.page_number} of ${data.total_pages}`;
+                            if (data.has_next) {
+                                // paginationLinks.innerHTML += `<a href="#" onclick="load(${data.page_number+1})">Next</a>`;
+                                const next_button = document.createElement('button');
+                                next_button.innerText = "Next";
+                                next_button.addEventListener("click", () => {
+                                    document.querySelectorAll("#posts").forEach(container => {
+                                        container.innerHTML = '';
+                                    });
+                                    load(data.page_number + 1);
+                                });
+                                paginationLinks.append(next_button);
+                            }
                         })
-                    };
+                        .catch(error => console.error('Error', error));
+                    }
 
                     // Add new post with given contents to DOM
-                    function add_post(contents) {
+/*                     function add_post(contents) {
 
                         // Create new post
                         const post = document.createElement('div');
@@ -191,7 +241,7 @@
 
                         // Add post to DOM
                         document.querySelector('#posts').append(post);
-                    }
+                    } */
 
                 </script>
 
@@ -204,6 +254,9 @@
                 <div id="user_posts">
                 </div>
 
+                <div id="next-prev-link">
+                </div>
+
                 <div id="following_posts">
                 </div>
 
@@ -212,3 +265,50 @@
         {% endif %}
 
     {% endblock %}
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paginated Data</title>
+</head>
+<body> -->
+    <!-- Display paginated data  
+    <div id="data-container"></div> -->
+
+    <!-- Pagination links 
+    <div id="pagination-links"></div> -->
+
+    <!-- JavaScript to handle pagination -->
+<!--     <script>
+        function fetchData(pageNumber) {
+            fetch(`/your-view-url/?page=${pageNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Handle the received JSON data
+                    const dataContainer = document.getElementById('data-container');
+                    dataContainer.innerHTML = ''; // Clear previous data
+                    data.data.forEach(item => {
+                        dataContainer.innerHTML += `<div>${JSON.stringify(item)}</div>`; // Display data
+                    });
+
+                    // Handle pagination links
+                    const paginationLinks = document.getElementById('pagination-links');
+                    paginationLinks.innerHTML = '';
+                    if (data.has_previous) {
+                        paginationLinks.innerHTML += `<a href="#" onclick="fetchData(${data.page_number - 1})">Previous</a>`;
+                    }
+                    paginationLinks.innerHTML += ` Page ${data.page_number} of ${data.total_pages} `;
+                    if (data.has_next) {
+                        paginationLinks.innerHTML += `<a href="#" onclick="fetchData(${data.page_number + 1})">Next</a>`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Initial data fetch
+        fetchData(1); // Fetch first page data when the page loads
+    </script> -->
+<!--</body>
+</html> -->

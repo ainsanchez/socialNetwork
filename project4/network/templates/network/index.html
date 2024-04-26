@@ -36,29 +36,91 @@
                         <button type="submit">Post</button>
                     </form>
                 </div>
-
                 
                 <script>
-
-                    // Start with the first post
-                    // let counter = 0;
-                    // let page_number = 1;
-
-                    // Load posts 10 at a time
-                    // const quantity = 4;
 
                     // When DOM loads, render the first 20 posts
                     document.addEventListener('DOMContentLoaded', load(1));
 
-/*                     window.onscroll = () => {
-                        if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
-                            load();
-                        }
-                    } */
-
+                    // Edit a post
                     document.addEventListener('click', event => {
                         const element = event.target;
-                        if (element.className === 'userpost') {
+
+                        if (element.className === "editpost") {
+
+                            // First hide the views that I do not want to display
+                            document.querySelectorAll("#posts").forEach(container => {
+                                container.style.display = 'none';
+                            });
+                            document.querySelectorAll("#following_posts").forEach(container => {
+                                container.style.display = 'none';
+                            });
+                            document.querySelectorAll("#user_posts").forEach(container => {
+                                container.style.display = 'none';
+                            });
+                            document.querySelector("#profile").style.display = 'none';
+                            document.querySelector("#userpost-view").style.display = 'none';
+                            document.querySelector("#next-prev-link").style.display = 'none';
+                            document.querySelector("#edit-form").style.display = 'block';
+
+                            //document.querySelector("#nav-bar").style.display = 'none';
+
+                            // Set a GET request to load the edit view
+                            let post_id = element.value;
+
+                            fetch(`/edit/${post_id}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                var edition = document.getElementById('edition');
+                                edition.innerHTML = data.content;
+                                var content = edition.innerHTML;
+                                //var content = "Astro";
+
+                                // Save the edited post and save it to database
+                                edition.addEventListener('input', function() {
+                                    var editedValue = edition.value;
+                                    edition.innerHTML = "";
+                                    edition.append(editedValue);
+                                    content = edition.innerHTML;
+                                });
+
+                                document.querySelector("#edit-form").addEventListener('submit', function(event) {
+
+                                    // Prevent the defaul form submission
+                                    event.preventDefault();
+                                    //console.log(edition);
+
+                                    // Fetch the API to submit the form
+                                    fetch(`/edit/${post_id}`, {
+                                        method: 'PUT',
+                                        body: JSON.stringify({
+                                            content: content
+                                        })
+                                    })
+                                    .then(response => {
+                                        if(!response.ok) {
+                                            throw new Error("Network response was not OK");
+                                        }
+                                    })
+                                    .then(result => {
+                                        console.log(result);
+                                    })
+                                    .catch(error => {
+                                        console.log("There was a problem with the fetch operation", error);
+                                    })
+                                 });
+                            })
+                            .catch(error => {
+                                console.error("Error fetching HTML:", error);
+                            });
+                        }
+                    });
+
+
+                    // Access the user profile
+                    document.addEventListener('click', event => {
+                        const element = event.target;
+                        if (element.id === 'userName' | element.className === 'userpost') {
 
                             // First hide the views that I do not want to display
                             document.querySelectorAll("#posts").forEach(container => {
@@ -73,9 +135,15 @@
                             document.querySelector("#profile").style.display = 'block';
                             document.querySelector("#userpost-view").style.display = 'none';
                             document.querySelector("#next-prev-link").style.display = 'none';
+                            document.querySelector("#edit-form").style.display = 'none';
 
                             // Get username via API to upload Community contents
-                            const username = element.value;
+                            let username = element.value;
+
+                            if (element.id == 'userName') {
+                                username = element.innerText;
+                            }
+
                             fetch(`/profile/${username}`)
                             .then(response => response.json())
                             .then(data => {
@@ -99,6 +167,7 @@
                                 }
 
                                 // Load the followers' posts
+                                document.querySelector('#user_posts').innerHTML = '';
                                 data.posts.forEach(contents => {            
                                     // Create new post
                                     const post = document.createElement('div');
@@ -115,7 +184,8 @@
                         }
                     });    
 
-                    // Select objects from the layout to display posts in other tabs
+
+                    // Display posts of the users' following 
                     document.querySelector("#following").addEventListener('click', function(event) {
                         
                         // Prevent the default form submission
@@ -134,6 +204,7 @@
                         document.querySelector("#profile").style.display = 'none';
                         document.querySelector("#userpost-view").style.display = 'none';
                         document.querySelector("#next-prev-link").style.display = 'none';
+                        document.querySelector("#edit-form").style.display = 'none';
 
                         // Define the user
                         const username = document.querySelector("#userName").innerText;
@@ -141,7 +212,7 @@
                         fetch(`/following/${username}`)
                         .then(response => response.json())
                         .then(data => {
-                            // Load the followers' posts
+                            // Load the users' following posts
                             data.posts.forEach(contents => {            
                                 // Create new post
                                 const post = document.createElement('div');
@@ -157,23 +228,10 @@
                         });
                     });
                         
-                    // Load the next set of posts
-                    // function load() {
+
+                    // Load the posts posts
                     function load(pageNumber) {
 
-                        // Set start and end post numbers, and update counter
-
-/*                         let start = counter;
-                        let end = counter;
-
-                        if (counter < 1) {
-                            end = start + quantity - 1;
-                            counter = end + 1;                        
-                        } else {
-                            end = start + 1;
-                            counter = end + 1;      
-                        } */
-                    
                         // Get the new posts and add posts
                         // fetch(`/posts?start=${start}&end=${end}`)
                         fetch(`/posts/?page=${pageNumber}`)
@@ -184,10 +242,16 @@
                                 const post = document.createElement('div');
                                 // post.innerHTML = '';
                                 post.className = 'post';
-                                post.innerHTML = `<button class="userpost" value=${item.user}> \n
-                                         ${item.user} </button> posted: <br> \n
-                                         ${item.content} <br> \n ${item.timestamp} <br> \n
-                                         ${item.likes} likes`;
+                                if (item.user!==data.signedInUser) {
+                                    post.innerHTML = `<button class="userpost" value=${item.user}> \n
+                                            ${item.user} </button> posted: <br> ${item.content} \n
+                                            <br> ${item.timestamp} <br> ${item.likes} likes`;
+                                } else {
+                                    post.innerHTML = `<button class="userpost" value=${item.user}> \n
+                                            ${item.user} </button> posted: <br> ${item.content} \n
+                                            <br> <button class="editpost" value=${item.id}>Edit \n
+                                            </button> <br> ${item.timestamp} <br> ${item.likes} likes`;                                    
+                                }
                                 // Add post to DOM
                                 document.querySelector('#posts').append(post);
                             });
@@ -228,22 +292,8 @@
                         .catch(error => console.error('Error', error));
                     }
 
-                    // Add new post with given contents to DOM
-/*                     function add_post(contents) {
-
-                        // Create new post
-                        const post = document.createElement('div');
-                        post.className = 'post';
-                        post.innerHTML = `<button class="userpost" value=${contents.user}> \n
-                                         ${contents.user} </button> posted: <br> \n
-                                         ${contents.content} <br> \n ${contents.timestamp} <br> \n
-                                         ${contents.likes} likes`;
-
-                        // Add post to DOM
-                        document.querySelector('#posts').append(post);
-                    } */
-
                 </script>
+
 
                 <div id="posts">
                 </div>
@@ -260,55 +310,21 @@
                 <div id="following_posts">
                 </div>
 
+                <div id="content">
+                </div>
+
+
+                <form id="edit-form" method="post">
+                    {% csrf_token %}
+                    <h1 class="display-4">Edit:</h1>    
+                    <textarea id="edition" rows="4" cols="50"></textarea>
+                    <br>
+                    <input class="btn btn-secondary" type="submit" value="Save"/>
+                </form>
+            
+
             {% endblock %}
 
         {% endif %}
 
     {% endblock %}
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paginated Data</title>
-</head>
-<body> -->
-    <!-- Display paginated data  
-    <div id="data-container"></div> -->
-
-    <!-- Pagination links 
-    <div id="pagination-links"></div> -->
-
-    <!-- JavaScript to handle pagination -->
-<!--     <script>
-        function fetchData(pageNumber) {
-            fetch(`/your-view-url/?page=${pageNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Handle the received JSON data
-                    const dataContainer = document.getElementById('data-container');
-                    dataContainer.innerHTML = ''; // Clear previous data
-                    data.data.forEach(item => {
-                        dataContainer.innerHTML += `<div>${JSON.stringify(item)}</div>`; // Display data
-                    });
-
-                    // Handle pagination links
-                    const paginationLinks = document.getElementById('pagination-links');
-                    paginationLinks.innerHTML = '';
-                    if (data.has_previous) {
-                        paginationLinks.innerHTML += `<a href="#" onclick="fetchData(${data.page_number - 1})">Previous</a>`;
-                    }
-                    paginationLinks.innerHTML += ` Page ${data.page_number} of ${data.total_pages} `;
-                    if (data.has_next) {
-                        paginationLinks.innerHTML += `<a href="#" onclick="fetchData(${data.page_number + 1})">Next</a>`;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-        // Initial data fetch
-        fetchData(1); // Fetch first page data when the page loads
-    </script> -->
-<!--</body>
-</html> -->

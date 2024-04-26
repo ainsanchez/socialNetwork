@@ -9,8 +9,10 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.html import strip_tags
+from django.views.decorators.csrf import csrf_exempt
 
-from .forms import NewPost
+
+from .forms import NewPost, Edit
 from .models import User, userPost, Community
 
 
@@ -94,18 +96,11 @@ def register(request):
 # Make a new UserPost, mimicking the post method commented in index
 def posts(request):
 
-    # Get start and end points
-    #start = int(request.GET.get("start") or 0)
-    #end = int(request.GET.get("end") or (start + 9))
-
     # Load the posts saved in the platform
     posts = userPost.objects.all()
 
     # Generate a list of posts
     posts = list(posts.order_by("-timestamp").all())
-    #data = []
-    #for i in range(start, end + 1):
-    #    data.append(posts[i].serialize())
 
     # Transforming the data into a Paginator object
     # Retrieve all data from the model
@@ -119,22 +114,19 @@ def posts(request):
     # newData = list(page_obj.object_list.values()) 
     serialized_data = [post.serialize() for post in page_obj.object_list]
 
+    # Get signed-in user
+    signedInUser = request.user.username
+
     # Artificially delay speed of response
     time.sleep(1)
 
-    # Print page numbers
-    if page_obj.has_next():
-        print(page_obj.number)
-    if page_obj.has_previous():
-        print(page_obj.number)
-
-    # Return a list of posts
     # return JsonResponse({"posts": data})
     return JsonResponse({"posts": serialized_data,
                          "total_pages": paginator.num_pages,
                          "has_next": page_obj.has_next(),
                          "has_previous": page_obj.has_previous(),
-                         "page_number": page_obj.number})
+                         "page_number": page_obj.number,
+                         "signedInUser": signedInUser})
 
     # return JsonResponse([post.serialize() for post in posts], safe=False)
 
@@ -234,19 +226,68 @@ def following(request, username):
     return JsonResponse({"posts": newData})
 
 
+# Edit a post
+@csrf_exempt
+@login_required
+def edit(request, post_id):
+
+    if request.method == "GET":
+        # Load the post to edit
+        post = userPost.objects.get(pk=post_id)
+
+        # Set the context
+        content = post.content
+        # context = {
+        #    'edit': Edit(initial={'textarea': post.content}),
+        #    'post_id': post_id
+        #}
+        #return render(request, "network/edit.html", context)
+        return JsonResponse({"content": content})
+    
+    elif request.method == "PUT":
+        # Check the edition made to the post
+        data = json.loads(request.body)
+        content = data.get("content")
+        # data = request.POST
+        # edition = data.get('edition')
+        
+        print(content)
+
+        # Get the post to be updated
+        post = userPost.objects.get(pk=post_id)
+        print(post_id)
+
+        #Update the value of the post
+        post.content = content
+        post.save()
+
+        #return JsonResponse({"message": "Post updated successfully"}, status=201)
+        return HttpResponse(status=204)
+
+        #form = Edit(request.POST)
+        #if form.is_valid():
+            # Get the value from the textarea
+        #    textarea = form.cleaned_data["body"]
+        #    print(textarea)
+            # Get the post to be updated
+        #    post = userPost.objects.get(pk=post_id)
+            # Update the value of the post
+        #    post.content = textarea
+        #    post.save()
+        #    return HttpResponse('<p>Info Saved!</p>')
+        #else:
+        #    return HttpResponse('<p>Info is not Valid!</p>')        
+
+
 # Get a community based on the profile/username request 
 # -- Notice that this page is not uploaded 
 @login_required
 def followers_content(request, username):
 
-    #print(username)
-    #print("princearthas")
     # Filter user based on username, and then query his/her community
     user = User.objects.get(username=username)
 
     # Then query user's community to display his/her profile info
-    # Set a try and catch for error display when selecting princearthas profile - Community.DoesNotExist
-    
     community = Community.objects.filter(user=user)
 
     # If user does not have a community yet, then create one with no followers
@@ -287,24 +328,3 @@ def followers_content(request, username):
     return JsonResponse({"posts": dataFinal, "user": user.username,
                           "community": community[0].number_of_followers,
                            "page_obj": page_obj})
-    # page_obj is not json seriazable, so I can only render the request - No javascript for this?
-
-""" from django.core.paginator import Paginator
-from django.http import JsonResponse
-from .models import YourModel
-
-def your_view(request):
-    queryset = YourModel.objects.all()  # Replace YourModel with your actual model
-    paginator = Paginator(queryset, per_page=10)  # Change per_page according to your requirement
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    serialized_data = list(page_obj.object_list.values())  # Serialize queryset to JSON
-
-    return JsonResponse({
-        'data': serialized_data,
-        'has_next': page_obj.has_next(),
-        'has_previous': page_obj.has_previous(),
-        'page_number': page_obj.number,
-        'total_pages': paginator.num_pages
-    }) """

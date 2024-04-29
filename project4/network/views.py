@@ -276,7 +276,124 @@ def edit(request, post_id):
         #    post.save()
         #    return HttpResponse('<p>Info Saved!</p>')
         #else:
-        #    return HttpResponse('<p>Info is not Valid!</p>')        
+        #    return HttpResponse('<p>Info is not Valid!</p>')      
+          
+
+# Edit a post
+@csrf_exempt
+@login_required
+def edit(request, post_id):
+
+    if request.method == "GET":
+        # Load the post to edit
+        post = userPost.objects.get(pk=post_id)
+
+        # Set the context
+        content = post.content
+        # context = {
+        #    'edit': Edit(initial={'textarea': post.content}),
+        #    'post_id': post_id
+        #}
+        #return render(request, "network/edit.html", context)
+        return JsonResponse({"content": content})
+    
+    elif request.method == "PUT":
+        # Check the edition made to the post
+        data = json.loads(request.body)
+        content = data.get("content")
+        # data = request.POST
+        # edition = data.get('edition')
+        
+        print(content)
+
+        # Get the post to be updated
+        post = userPost.objects.get(pk=post_id)
+        print(post_id)
+
+        #Update the value of the post
+        post.content = content
+        post.save()
+
+        #return JsonResponse({"message": "Post updated successfully"}, status=201)
+        return HttpResponse(status=204)
+
+
+# Edit a post
+@csrf_exempt
+@login_required
+def like(request, post_id):
+
+    if request.method == "GET":
+        # Load the post to edit
+        post = userPost.objects.get(pk=post_id)
+
+        # Set the context
+        likes = post.likes
+        # context = {
+        #    'edit': Edit(initial={'textarea': post.content}),
+        #    'post_id': post_id
+        #}
+        #return render(request, "network/edit.html", context)
+        return JsonResponse({"likes": likes})
+    
+    elif request.method == "PUT":
+        # Check the edition made to the post
+        data = json.loads(request.body)
+        likes = data.get("likes")
+        # data = request.POST
+        # edition = data.get('edition')
+        
+        print(likes)
+
+        # Get the post to be updated
+        post = userPost.objects.get(pk=post_id)
+        print(post_id)
+
+        #Update the value of the post
+        post.likes = likes
+        post.save()
+
+        #return JsonResponse({"message": "Post updated successfully"}, status=201)
+        return HttpResponse(status=204)
+
+
+# Edit a post
+@csrf_exempt
+@login_required
+def unlike(request, post_id):
+
+    if request.method == "GET":
+        # Load the post to edit
+        post = userPost.objects.get(pk=post_id)
+
+        # Set the context
+        likes = post.likes
+        # context = {
+        #    'edit': Edit(initial={'textarea': post.content}),
+        #    'post_id': post_id
+        #}
+        #return render(request, "network/edit.html", context)
+        return JsonResponse({"likes": likes})
+    
+    elif request.method == "PUT":
+        # Check the edition made to the post
+        data = json.loads(request.body)
+        likes = data.get("likes")
+        # data = request.POST
+        # edition = data.get('edition')
+        
+        print(likes)
+
+        # Get the post to be updated
+        post = userPost.objects.get(pk=post_id)
+        print(post_id)
+
+        #Update the value of the post
+        post.likes = likes
+        post.save()
+
+        #return JsonResponse({"message": "Post updated successfully"}, status=201)
+        return HttpResponse(status=204)
 
 
 # Get a community based on the profile/username request 

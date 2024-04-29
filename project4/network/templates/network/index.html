@@ -40,82 +40,96 @@
                 <script>
 
                     // When DOM loads, render the first 20 posts
-                    document.addEventListener('DOMContentLoaded', load(1));
+                    document.addEventListener('DOMContentLoaded', function() {
+                        load(1);
+                        document.getElementById("editor").style.display = "none";
+                    
+                        // Edit a post
+                        document.addEventListener('click', event => {
+                            const element = event.target;
 
-                    // Edit a post
-                    document.addEventListener('click', event => {
-                        const element = event.target;
+                            if (element.className === "editpost") {
 
-                        if (element.className === "editpost") {
-
-                            // First hide the views that I do not want to display
-                            document.querySelectorAll("#posts").forEach(container => {
-                                container.style.display = 'none';
-                            });
-                            document.querySelectorAll("#following_posts").forEach(container => {
-                                container.style.display = 'none';
-                            });
-                            document.querySelectorAll("#user_posts").forEach(container => {
-                                container.style.display = 'none';
-                            });
-                            document.querySelector("#profile").style.display = 'none';
-                            document.querySelector("#userpost-view").style.display = 'none';
-                            document.querySelector("#next-prev-link").style.display = 'none';
-                            document.querySelector("#edit-form").style.display = 'block';
-
-                            //document.querySelector("#nav-bar").style.display = 'none';
-
-                            // Set a GET request to load the edit view
-                            let post_id = element.value;
-
-                            fetch(`/edit/${post_id}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                var edition = document.getElementById('edition');
-                                edition.innerHTML = data.content;
-                                var content = edition.innerHTML;
-                                //var content = "Astro";
-
-                                // Save the edited post and save it to database
-                                edition.addEventListener('input', function() {
-                                    var editedValue = edition.value;
-                                    edition.innerHTML = "";
-                                    edition.append(editedValue);
-                                    content = edition.innerHTML;
+                                // First hide the views that I do not want to display
+                                document.querySelectorAll("#posts").forEach(container => {
+                                    container.style.display = 'none';
                                 });
+                                document.querySelectorAll("#following_posts").forEach(container => {
+                                    container.style.display = 'none';
+                                });
+                                document.querySelectorAll("#user_posts").forEach(container => {
+                                    container.style.display = 'none';
+                                });
+                                document.querySelector("#profile").style.display = 'none';
+                                document.querySelector("#userpost-view").style.display = 'none';
+                                document.querySelector("#next-prev-link").style.display = 'none';
+                                document.querySelector("#editor").style.display = 'block';
 
-                                document.querySelector("#edit-form").addEventListener('submit', function(event) {
+                                //document.querySelector("#nav-bar").style.display = 'none';
 
-                                    // Prevent the defaul form submission
-                                    event.preventDefault();
-                                    //console.log(edition);
+                                // Set a GET request to load the edit view
+                                let post_id = element.value;
 
-                                    // Fetch the API to submit the form
-                                    fetch(`/edit/${post_id}`, {
-                                        method: 'PUT',
-                                        body: JSON.stringify({
-                                            content: content
+                                fetch(`/edit/${post_id}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    var edition = document.getElementById('edition');
+                                    edition.innerHTML = data.content;
+                                    var content = edition.innerHTML;
+                                    //var content = "Astro";
+
+                                    // Save the edited post and save it to database
+                                    edition.addEventListener('input', function() {
+                                        var editedValue = edition.value;
+                                        edition.innerHTML = "";
+                                        edition.append(editedValue);
+                                        content = edition.innerHTML;
+                                    });
+
+                                    document.querySelector("#edit-form").addEventListener('submit', function(event) {
+
+                                        // Prevent the defaul form submission
+                                        event.preventDefault();
+                                        //console.log(edition);
+
+                                        // Fetch the API to submit the form
+                                        fetch(`/edit/${post_id}`, {
+                                            method: 'PUT',
+                                            body: JSON.stringify({
+                                                content: content
+                                            })
                                         })
-                                    })
-                                    .then(response => {
-                                        if(!response.ok) {
-                                            throw new Error("Network response was not OK");
-                                        }
-                                    })
-                                    .then(result => {
-                                        console.log(result);
-                                    })
-                                    .catch(error => {
-                                        console.log("There was a problem with the fetch operation", error);
-                                    })
-                                 });
-                            })
-                            .catch(error => {
-                                console.error("Error fetching HTML:", error);
-                            });
-                        }
+                                        .then(response => {
+                                            if(!response.ok) {
+                                                throw new Error("Network response was not OK");
+                                            } else {
+                                                load(1);
+                                                document.querySelectorAll("#posts").forEach(container => {
+                                                    container.style.display = 'block';
+                                                });
+                                                document.querySelectorAll("#following_posts").forEach(container => {
+                                                    container.style.display = 'none';
+                                                });
+                                                document.querySelectorAll("#user_posts").forEach(container => {
+                                                    container.style.display = 'none';
+                                                });
+                                                document.querySelector("#profile").style.display = 'none';
+                                                document.querySelector("#userpost-view").style.display = 'block';
+                                                document.querySelector("#next-prev-link").style.display = 'block';
+                                                document.querySelector("#editor").style.display = 'none';
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.log("There was a problem with the fetch operation", error);
+                                        });
+                                    });
+                                })
+                                .catch(error => {
+                                    console.error("Error fetching HTML:", error);
+                                });
+                            }
+                        });
                     });
-
 
                     // Access the user profile
                     document.addEventListener('click', event => {
@@ -227,7 +241,55 @@
                             })
                         });
                     });
-                        
+                    
+                    document.addEventListener("click", event => {
+                        const element = event.target;
+                        if (element.className === "likebtn") {
+                            let post_id = element.value;
+                            let likes = 0;
+                            fetch(`/like/${post_id}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    likes = data.likes + 1;
+                                    // Check the next two lines
+                                    const engagement = element.parentElement.querySelector(".engagement");
+                                    //const engagement = post.querySelector(".engagement");
+                                    engagement.innerHTML = likes;
+                                fetch(`/like/${post_id}`, {
+                                    method: "PUT",
+                                    body: JSON.stringify({
+                                        likes: likes
+                                    })
+                                });
+                            });
+                            load(1);
+                        }
+                    });
+
+                    document.addEventListener("click", event => {
+                        const element = event.target;
+                        if (element.className === "unlikebtn") {
+                            let post_id = element.value;
+                            let likes = 0;
+                            fetch(`/unlike/${post_id}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    likes = data.likes - 1;
+                                    // const post = element.parentElement;
+                                    // post.likes = post.likes - 1;
+                                    const engagement = element.parentElement.querySelector(".engagement");
+                                    //const engagement = post.querySelector(".engagement");
+                                    engagement.innerHTML = likes;
+                                fetch(`/unlike/${post_id}`, {
+                                    method: "PUT",
+                                    body: JSON.stringify({
+                                        likes: likes
+                                    })
+                                });
+                            });
+                            load(1);
+                        }
+                    });
 
                     // Load the posts posts
                     function load(pageNumber) {
@@ -245,12 +307,16 @@
                                 if (item.user!==data.signedInUser) {
                                     post.innerHTML = `<button class="userpost" value=${item.user}> \n
                                             ${item.user} </button> posted: <br> ${item.content} \n
-                                            <br> ${item.timestamp} <br> ${item.likes} likes`;
+                                            <br> ${item.timestamp} <br> <label class="engagement"> ${item.likes} \n
+                                            </label> likes <button class="likebtn" value=${item.id}>Like \n
+                                            </button> <button class="unlikebtn" value=${item.id}>Unlike</button>`;
                                 } else {
                                     post.innerHTML = `<button class="userpost" value=${item.user}> \n
                                             ${item.user} </button> posted: <br> ${item.content} \n
                                             <br> <button class="editpost" value=${item.id}>Edit \n
-                                            </button> <br> ${item.timestamp} <br> ${item.likes} likes`;                                    
+                                            </button> <br> ${item.timestamp} <br> <label class="engagement"> ${item.likes} \n
+                                            </label> likes <button class="likebtn" value=${item.id}>Like</button> \n
+                                            <button class="unlikebtn" value=${item.id}>Unlike</button>`;                                   
                                 }
                                 // Add post to DOM
                                 document.querySelector('#posts').append(post);
@@ -313,15 +379,16 @@
                 <div id="content">
                 </div>
 
+                <div id="editor">
+                    <form id="edit-form" method="post">
+                        {% csrf_token %}
+                        <h1 class="display-4">Edit:</h1>    
+                        <textarea id="edition" rows="4" cols="50"></textarea>
+                        <br>
+                        <input class="btn btn-secondary" type="submit" value="Save"/>
+                    </form>    
+                </div>
 
-                <form id="edit-form" method="post">
-                    {% csrf_token %}
-                    <h1 class="display-4">Edit:</h1>    
-                    <textarea id="edition" rows="4" cols="50"></textarea>
-                    <br>
-                    <input class="btn btn-secondary" type="submit" value="Save"/>
-                </form>
-            
 
             {% endblock %}
 
